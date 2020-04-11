@@ -1,0 +1,15 @@
+API stands for Application Programing Interface.
+
+REST Stan for representaion State Transfer.rest api used for communication between frontend and backend.
+ 
+An Api is a collection of Base Url,Resource,Paraameter and API key.
+
+we use diffrent methods to use api or urls
+
+1>GET->This command helps us to fetch data from server.We pass parameters and Api Key with the base url.
+
+2>POST->This command helps us to Insert Data in the Database.We Dont pass Paramets we pass data in body to post it 
+
+3>PUT->This command is use to Update data
+
+4>DELETE->Ths Command is use to Delete The data.
