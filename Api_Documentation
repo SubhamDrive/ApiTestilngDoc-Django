@@ -15,8 +15,8 @@ we use diffrent methods to use api or urls
 4>DELETE->Ths Command is use to Delete The data.
 
 
-
-
+What is Postman?
+Postman is REST Cient To test API and Create API.
 
 
 
@@ -59,3 +59,33 @@ http://blogs.quovantis.com/frisby-rest-api-automation-framework/
 
 
 https://testautomationu.applitools.com 							MOST Important
+
+https://restful-booker.herokuapp.com/apidoc/index.html#api-Booking
+
+
+to get the process_id
+lsof -i :3001
+
+to kill the process
+kill 1047
+Response Codes
+
+
+
+
+
+
+
+POISED API Testing Strategy
+=========================
+1>Parameter->We checked with diffrent values and sometime also give blank
+2>Output->
+3>interop->Date format fod diffrent country
+4>Securiy->check all authirization issues
+5>Errors->heck the errors are coming correctly or not
+6>Data->ex After creating data check data is avilabe or not,check the response time by serching data in database
+
+(POISED)
+
+
+
