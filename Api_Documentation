@@ -88,4 +88,11 @@ POISED API Testing Strategy
 (POISED)
 
 
+DATA Driven Tests
+=================
+1>First take the post request
+2>create a csv file 
+3>select csv file in test runner
+4>create test in postman
+ 
 
