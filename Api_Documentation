@@ -62,6 +62,7 @@ https://testautomationu.applitools.com 							MOST Important
 
 https://restful-booker.herokuapp.com/apidoc/index.html#api-Booking
 
+https://learning.postman.com/docs/postman/scripts/postman-sandbox-api-reference/
 
 to get the process_id
 lsof -i :3001
