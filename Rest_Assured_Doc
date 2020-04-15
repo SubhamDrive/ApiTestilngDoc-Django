@@ -1,0 +1,762 @@
+
+CHAPTER 1
+===========
+Q>What is Rest Assured?
+ REST Assured is a Java DSL, or Domain-Specific Language, that allows you to write powerful, readable, and maintainable tests in Java for your RESTful APIs. Your REST Assured tests run on top of existing unit testing frameworks like JUnit or TestNG.
+
+What I like most about using REST Assured is that it abstracts away a lot of boilerplate code, making your tests powerful yet really easy to read and maintain. REST Assured is an open source Java project. It's developed and maintained by Johan Haleby. You can find all there is to know about REST Assured on the REST Assured main page, which is rest-assured.io.
+
+If you want to start with working with REST Assured in your Java testing projects, it's really easy to do so. You can simply add REST Assured as a dependency in your Maven project:
+
+<dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <version>RELEASE</version>
+</dependency>
+Or if you prefer to use Gradle instead, then that's supported as well:
+
+testCompile 'io.rest-assured:rest-assured:3.3.0'
+Now before we dive deeper into REST Assured as a test tool, I'd like to quickly introduce you to our API under test. The API that we're going to be using in the remainder of this course is Zippopotam.us, and it's a simple RESTful API that supplies location data based on the country code and the zip code that you supply in your API request.
+
+The API has a nice website, as you can see. And if you click on countries, you can see which countries are supported by the API. So, for which countries and which zip code ranges the API will supply you with a response with location data related to that specific country code and zip code. As you can see, there are more than 60 countries features in this API, so that's more than enough test data to work with in this course.
+
+If we want to use this API in our REST Assured tests, we can send a GET call at to this locator which contains two path parameters, namely US as a country code and 90210 as the zip code for which we want to retrieve the location data.
+
+_GET http://api.zippopotam.us/us/90210
+If you perform this request using REST Assured, the response will look something like this:
+
+{
+  post code: "90210",
+  country: "United States",
+  country abbreviation: "US",
+  places: [
+    {
+      place name: "Beverly Hills",
+      longitude: "-118.4065",
+      state: "California",
+      state abbreviation: "CA",
+      latitude: "34.0901"
+    }
+  ]
+}
+And, as you can see in the response, you get a list of places associated with the country code and the zip code that you specified, and in this case, the API returns a single place, namely Beverly Hills in the state of California.
+
+The API also returns some response headers, including the status code which indicates that everything went fine, and the Content-Type, which tells us, or rather, the consumer of the API, that the content type of the response is application/json which helps the API consumer decode the response body.
+
+Let's take a quick look at a simple REST Assured test that represents this API call.
+
+What I have here is a very basic REST Assured test that performs the GET request that we saw earlier and checks whether the first place name in the body in the list of places is equal to Beverly Hills.
+
+import org.junit.Test;
+
+import static io.restassured.RestAssured.*;
+import static org.hamcrest.Matchers.*;
+
+public class Chapter1Test {
+
+    @Test
+    public void requestUsZipCode90210_checkPlaceNameInResponseBody_expectBeverlyHills() {
+
+        given().
+        when().
+            get("http://zippopotam.us/us/90210").
+        then().
+            assertThat().
+            body("places[0].'place name'", equalTo("Beverly Hills"));
+    }
+}
+As you can see, this REST Assured code looks really clean and even though I've inserted some line breaks for readability, it's actually just a single line of code that performs the GET request and does the assertions on the response.
+
+Because REST Assured runs on top of JUnit or TestNG, you don't really need anything else to be able to write and run REST Assured tests in your Java project. And if you run this test, obviously it passes because the only place that's associated with the US zip code of 90210 is, of course, Beverly Hills.
+
+In order to demonstrate to you that the test really does what it says on the tin, let's quickly change the expected value of the place name in the list of places in the API response to "New York", and then see what happens.
+
+And now, as expected, this test fails and the underlying unit testing framework, in this case JUnit, tells us that, "Hey, the expected value is New York in the list of place names associated with the zip code 90210, but the actual value that was returned by the API is Beverly Hills."
+
+So, let's quickly change this back to Beverly Hills. And as you can see, our test will now pass again.
+
+In the next chapter, we'll be looking in some more detail about some of the basic features that REST Assured provides us and that can help you to write powerful yet maintainable tests in Java.
+
+All of the code examples that you've seen in this chapter and in the chapters to come can be found on my GitHub page, so you can easily download or clone those and try them out for yourself.
+
+
+
+CHAPTER 2
+=========
+In this lesson, we are going to take a look at some of the basic features and capabilities that REST Assured provides.
+REST Assured provides support for all known HTTP methods. In the example in the previous chapter, we saw a HTTP GET, but REST Assured just as easily supports POST, PUT, PATCH, DELETE, and all other existing HTTP methods.
+
+As we've seen in the previous chapter as well, REST Assured also supports the Gherkin syntax — the Given/ When/Then. Now, you either love or you hate the syntax. REST Assured doesn't force you to use it. It just gives you the option to do so.
+
+To enable you to write checks in a human readable language, REST Assured uses Hamcrest Matchers. We'll see more about Hamcrest Matchers in a bit.
+
+And it's also really useful to know that REST Assured uses JsonPath/GPath and XmlPath for selecting elements from response bodies.
+
+#Checking the Response Status Code
+So, a very basic first check that we would want to write in REST Assured is to check the response status code for an API call. You can do this very easily in REST Assured with the status code assertion method, which takes exactly one parameter, being the expected status code, as an integer.
+
+Now, if we perform the same GET API call that we saw in the previous chapter and we put in an assertion on the status code being equal to 200 and we run our tests, we see that this test passes, telling us that the status code of the API response was indeed equal to 200.
+
+import io.restassured.http.ContentType;
+import org.junit.Test;
+
+import static io.restassured.RestAssured.*;
+import static org.hamcrest.Matchers.*;
+
+public class Chapter2Test {
+
+    @Test
+    public void requestUsZipCode90210_checkStatusCode_expectHttp200() {
+
+        given().
+        when().
+            get("http://zippopotam.us/us/90210").
+        then().
+            assertThat().
+            statusCode(200);
+    }
+}
+If we change to expected status code to 201 and we run our test again, we see that our test now fails, and it tells us that the expected status code was 201 but the actual status code was 200.
+
+#Checking the Response Content Type
+Another thing that we might be interested in is the content type that's specified in the response header. Now, this content type tells the consumer of the API how to actually decode the response that's being returned by the API provider, so this is a very important header. So, it makes sense to write a check for it and see if it matches the expected content type value.
+
+    @Test
+    public void requestUsZipCode90210_checkContentType_expectApplicationJson() {
+        given().
+        when().
+            get("http://zippopotam.us/us/90210").
+        then().
+            assertThat().
+            contentType(ContentType.JSON);
+    }
+In REST Assured, we can assert on the content type using the content type method, which takes a single argument, specifying the expected content type. In this case, this would be JSON.
+
+So, if we run our test, we see that this test passes, telling us that the actual content type returned was indeed application/json
+
+Now, instead of using this enumeration, I could have also directly specified the string literal representation of this content type
+
+contentType("application/json");
+and the test would have passed just as well, but personally, I prefer using the enumeration.
+
+If we put in XML instead
+
+contentType(ContentType.XML);
+and run our test, we can see that our test now fails, so indeed it asserts correctly on the expected content type.
+
+#Logging Request and Response Details
+Now, as you know, API requests and responses contain much more data than just a status code or a content type.
+
+If you're interested to see what your REST Assured API test actually sends to the API provider or if you want to see everything that's being returned by the API provider when you put in a request, you can do so with the help of a number of logging statements.
+
+    @Test
+    public void requestUsZipCode90210_logRequestAndResponseDetails() {
+        given().
+            log().all().
+        when().
+            get("http://zippopotam.us/us/90210").
+        then().
+            log().body();
+    }
+Now, in this test method, after the given, I specified log().all() and this tells REST Assured to write everything there is to know about the API request to the standard output.
+
+I've done something similar after the then method, and this tells REST Assured to log the contents of the response body to the standard output as well.
+
+So, let's see what happens if we run this test method.
+
+Output
+
+Request method: GET
+Request URI:    http://zippopotam.us/us/90210
+Proxy:          <none>
+Request params: <none>
+Query params:   <none>
+Form params:    <none>
+Path params:    <none>
+Headers:        Accept=*/*
+Cookies:        <none>
+Multiparts:     <none>
+Body:           <none>
+{
+    "post code": "90210",
+    "country": "United States",
+    "country abbreviation": "US",
+    "places": [
+        {
+            "place name": "Beverly Hills",
+            "longitude": "-118.4065",
+            "state": "California",
+            "state abbreviation": "CA",
+            "latitude": "34.0901"
+        }
+    ]
+}
+What REST Assured now has done, it has written everything there is to know about the API request to the standard output, so you see the request method that's used, the resource or the URI that the request has been sent to, as well as any parameter values that have been used, header values, cookies, and more.
+
+Because I've asked REST Assured to write the body of the API response to the standard output as well, you can find it in the console too.
+
+And these logging statements can be very useful when you don't know exactly what's happening when you write or execute your REST Assured tests.
+
+#Checking the Response Body
+Now that we've seen how to write the response body to the standard output, let's write some actual checks for it.
+
+We've seen an example of this in the previous chapter as well, but let's look into this test in a little more detail.
+
+    @Test
+    public void requestUsZipCode90210_checkPlaceNameInResponseBody_expectBeverlyHills() {
+        given().
+        when().
+            get("http://zippopotam.us/us/90210").
+        then().
+            assertThat().
+            body("places[0].'place name'", equalTo("Beverly Hills"));
+    }
+After the then, which is the part of the REST Assured tests where I specify my expectations, I use the body method, which takes two arguments, to specify the assertion that I want to perform on the response body.
+
+The first argument is a JsonPath expression, which points to the exact location in the API response of the element that I want to check. And the second argument is a Hamcrest matcher, which is an expression representing the expected value of the element.
+
+In this specific test, I'm looking at the first entry in the list of places that returned by the API, and I want to extract the element called place name.
+
+Now, in this case, the element name is enclosed by single quotes because there's a nasty space in it and if I omit those single quotes, the JsonPath expression with be incorrect, so that's why I need them here.
+
+The Hamcrest Matcher expressing the check that I want to perform on that element value is a simple equalTo Hamcrest Matcher, which is a one on one comparison between the actual value of the elements that I've extracted using the JsonPath expression and the String value that I specified as an argument to the Hamcrest Matcher, and in this case, that's "Beverly Hills."
+
+When I run this test again, something similar to what we've done in the previous chapter, we can see that this one passes as well.
+
+#JsonPath and GPath
+Let's look at JsonPath and GPath in a little more detail. Here, you can see the code of the test that we've just created and ran, as well as the response body of the API call that this test performed.
+
+Now, again, in this test, we're interested in the value of the element place name, which is inside the list of places that the API returns. So, we're interested to see if the actual value of the place name element is equal to "Beverly Hills."
+
+To extract that value from the API response body, we use this JsonPath statement — places[0].'place name' — which again, tells us to take the first element of the places array in the JSON body and extract the place name element out of the first entry of the places array.
+
+Now, JsonPath is a path expression language of JSON. It's really similar to what XmlPath does for XML and what XPath does for HTML. One thing that's also very important to know is that REST Assured uses the GPath notation of the JsonPath query language.
+
+This is different from a tool like SoapUI, which uses JsonPath as well, but it uses a slightly different syntax to query the actual JSON document for specific element values, so that can get a little confusing.
+
+If you want to see some more examples about using JsonPath and the GPath notation, you can visit http://groovy-lang.org.
+
+#Hamcrest Matchers
+It also makes sense to tell you a little more about Hamcrest Matchers. We want to write an assertion that tells us whether the actual value of the place name element in the API response is equal to "Beverly Hills", and we can do that with the Hamcrest Matcher you see here.
+
+Hamcrest Matchers allow you to express expectations or checks or verifications you want to perform in your automated tests in readable language.
+
+Some examples,
+
+equalTo(X) - used to check whether an actual element value is equal to a pre-specified expected element value
+
+hasItem("value") - used to see whether a collection of elements contains a specific pre-specified item value
+
+hasSize(3) - used to verify the actual number of elements in a collection
+
+not(equalTo(X)) - inverts any given matcher that exists in the Hamcrest library
+
+If you want to know more about Hamcrest, and especially the Java implementation of Hamcrest, and all the matchers that are available within the library, you can visit the documentation at http://hamcrest.org.
+
+Let's look at a couple of examples of the use of JsonPath expressions and Hamcrest Matchers in this example here.
+
+Instead of extracting the place name from the Json response, I want to extract the state, and that's as easy as pointing to the first entry in the list of places in the API response again, and instead of extracting the place name element, extracting the state element, and for the US zip code of 90210, this should be equal to "California".
+
+   @Test
+   public void requestUsZipCode90210_checkStateNameInResponseBody_expectCalifornia() 
+   {
+       given().
+       when().
+           get("http://zippopotam.us/us/90210").
+       then().
+           assertThat().
+           body("places[0].state", equalTo("California"));
+   }
+Let's run the test to see what happens. And it looks like this expression works as expected.
+
+Now, as we've seen before, there are other matchers that are very useful with REST Assured tests, other than the equalTo matcher. One example of that is the hasItem matcher, which we see here.
+
+    @Test
+    public void requestUsZipCode90210_checkListOfPlaceNamesInResponseBody_expectContainsBeverlyHills() 
+    {
+        given().
+        when().
+            get("http://zippopotam.us/us/90210").
+        then().
+            assertThat().
+            body("places.'place name'", hasItem("Beverly Hills"));
+    }
+This JsonPath statement is slightly different from the previous in that it doesn't point to a specific entry in the list of places that's returned by the API, but instead, this expression tells me to extract all of the place name elements in the list of places that's being returned.
+
+So instead of a single element, we now get a collection of elements, as a result of this JsonPath expression, and now we want to see if that collection contains an item equal to "Beverly Hills," and we can do so using the hasItem matcher.
+
+And this test passes as well.
+
+To see if the hasItem and the JsonPath expression that we used really work as intended, let's invert the expected expression — not(hasItem("Beverly Hills")). As we've seen before, this is an easy way to invert any given Hamcrest Matcher.
+
+Let's and run the test again.
+
+What the test now does is see if within the list of place names, corresponding to the US zip code of 90210, there is no value equal to "Beverly Hills". And our test tells us that we expected a collection which doesn't contain Beverly Hills, but the API and the corresponding JsonPath expression returns a collection of place names with exactly one element in it, which is equal to "Beverly Hills," so the test fails.
+
+As a final example of using Hamcrest Matchers, we're going to extract the collection of place names again from the API response, and instead of asserting whether or not there is an element in it which has a specified value, we are going to write an assertion on the number of elements that is in the collection. And as we've seen before, we can use the hasSize Hamcrest matcher for that.
+
+    @Test
+    public void requestUsZipCode90210_checkNumberOfPlaceNamesInResponseBody_expectOne() {
+        given().
+        when().
+            get("http://zippopotam.us/us/90210").
+        then().
+            assertThat().
+            body("places.'place name'", hasSize(1));
+    }
+This test verifies that when we request the list of places that correspond to the US zip code of 90210, that there's exactly one place name in the list of places that's being returned by the API.
+
+And here too, we see that the test passes. As a final check, let's change the expected size of the list of place names associated with the zip code, and run the test again
+
+body("places.'place name'", hasSize(2));
+And as we expected, the test tells us that I expected a collection of size 2, but what I found is a collection with only a single element in it, so I'm going to fail the test, which is exactly what we wanted to do.
+
+
+
+
+CHPTER 3
+=============
+In this chapter we're going to talk about parameterizing your REST Assured tests. As you know, RESTful APIs are all about data. You have HTTP GET to retrieve existing data from the server, HTTP POST to create new data on the server, HTTP PUT or PATCH to update existing, and, of course, HTTP DELETE to delete existing data from a server.
+Because these RESTful APIs are all about data, it makes sense to try and test your RESTful API with lots of different data combinations. You can call them examples, or you can call them maybe test cases. But what you typically want to do, is try a number of different data combinations to see whether your RESTful API processes them in the way you expect it to.
+
+Now, there's a very straight forward way to repeat your REST Assured test with different sets of data. And that's simply by copying and pasting the tests that we've seen before. So, we've seen a test that verifies when we call our API on the test with the country code US and the zip code 90210, the text would return place name equals "Beverly Hills".
+
+If we want to perform the same test for a different combination of country code and zip code, we could simply copy and paste the test, write a new test, and for example, test it for country code US and zip code 12345. And check whether the place name that's returned by the API equals "Schenectady".
+
+And again, if we also want to check how the API processes zip codes from a different country, we could feed it the country code CA and the zip code B2R and check that the place name returned equals "Waverley" in Canada.
+
+Now, of course, this is not an optimal way of writing tests for different combinations of input parameters, or input values, and expected outcomes.
+
+#Parameters in RESTful APIs
+Before we see how you can create data driven tests in REST Assured, let's take a quick look at parameters in RESTful APIs. Basically, there are two types of parameters.
+
+The first one, and that's the one that our API under test also uses, is the path parameter, where the parameter value is simply part of the URL that you call when you invoke the API.
+
+http://api.zippopotam.us/us/90210
+http://api.zippopotam.us/ca/B2R
+So, for example, US and 90210 are path parameters. But also, in the last example that we saw in the previous slide, CA and B2R are different values for the same path parameters.
+
+The other type of parameters that's being used in RESTful APIs are query parameters, which we can recognize by the question mark (?) followed by key/value tuples separated by an equal sign.
+
+So, for example, there's a different API that calculates the MD5 checksum for a plain text string.
+
+http://md5.jsontest.com?text=apple
+
+http://md5.jsontest.com?text=banana
+
+And for this specific API you specify query parameters with a key text and a value which can contain any sort of thing like apple or banana. And it returns the MD5 value for that specific value of the text query parameter.
+
+So, how do you go about creating a parameterized REST Assured test?
+
+Let's take our example as a starting point and work from there.
+
+1. Create a test data collection
+
+The first step is to create a test data collection, which is a collection of input and expected outcome values that we want to feed to our test.
+
+Now, REST Assured in itself, does not provide a feature to specify sets of data which you can use for different iterations of your test. You need to use the data provider mechanism of the underlying unit testing framework that you use. TestNG has one out of the box. JUnit, or at least JUnit 4, which is the version of JUnit that I'm using in these examples, doesn't.
+
+But there's a nice add-on which is called junit.dataprovider, which allows you to do exactly the same things as you can do with TestNG out of the box with JUnit.
+
+So, I've included that in the project as well. And that add-on allows me to specify a data provider method, which creates and returns a 2-dimensional array of objects, which contain the test data that I want to use in my tests.
+
+import com.tngtech.java.junit.dataprovider.*;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import static io.restassured.RestAssured.*;
+import static org.hamcrest.Matchers.*;
+
+@RunWith(DataProviderRunner.class)
+public class Chapter3Test {
+
+    @DataProvider
+    public static Object[][] zipCodesAndPlaces() {
+        return new Object[][] {
+            { "us", "90210", "Beverly Hills" },
+            { "us", "12345", "Schenectady" },
+            { "ca", "B2R", "Waverley"}
+        };
+    }
+In this case, I want to repeat my test 3 times. The first iteration is with country code US, zip code 90210, and then I expect the place name to be Beverly Hills. The second iteration US 12345 and I expect the place name to Schenectady. And the third one is with country code CA, zip code B2R, and I expect that to map to the place of Waverley.
+
+
+2. Feed data collection to test method
+
+Now that we've created our test data set that we going to use to create iterations of our test, the next step, what we're going to do is to feed that data set, that data collection, to our test methods.
+
+And I can simply say use data provider and that data provider takes the name of the method that's annotated with data providers. So, in this case, it's zip codes and places. So, I'll simply tell my test to use @UseDataProvider("zipCodesAndPlaces"). And the underlying test framework, in this case, JUnit, will automatically look for a data provider method with same name and use that to feed our actual test method.
+
+The other thing we need to do is to tell our test method that they now can expect some arguments from that data provider method. In this case, each test data record, so to say, has 3 different fields. One that represents the country code, one that represents the zip code, and one that represents the expected place name.
+
+So, let's feed that to our test method. And it's really important that you respect the order in which the test data fields appear in your test data object because the mapping is simply done in order in which they appear in your test data set. So, the first field in a test data record will be mapped to the first parameter of the test method, the second field to the second parameter in the test method, and so on.
+
+    @Test
+    @UseDataProvider("zipCodesAndPlaces")
+    public void requestZipCodesFromCollection_checkPlaceNameInResponseBody_expectSpecifiedPlaceName(String countryCode, String zipCode, String expectedPlaceName) 
+
+3. Use path parameters to parameterize REST Assured tests
+
+Step 3 is telling our REST Assured test that it now has to accept path parameters, and those path parameters are populated by the values from our test data set. And also, we need to tell our REST Assured test that the expected value is no longer a hard-coded value, but it also comes from the expected value specified in our test data set. Let's see how we do that.
+
+So, first, I tell REST Assured that we now have two path parameters. One that represents the country code, which takes the value of the country code parameter. And one that represents the zip code, which takes the value of the zip code test parameter.
+
+The trick now, is to replace the hard-coded path parameter values in the GET method in our test with the names that we gave to the path parameters and close by curly brackets. This one, US is replaced by country code. And 90210 is replaced by zip code.
+
+And REST Assured will now automatically substitute the value of the path parameter country code, which is being passed to the test method from the data provider with the actual value of that country code specified in the test data object. And the same goes for the zip code.
+
+And the last thing that we need to do, is replace the hard-coded expected value for the place name, which is Beverly Hills, with the expected place name that's also specified in the test data set in the data provider.
+
+    @Test
+    @UseDataProvider("zipCodesAndPlaces")
+    public void requestZipCodesFromCollection_checkPlaceNameInResponseBody_expectSpecifiedPlaceName(String countryCode, String zipCode, String expectedPlaceName) 
+    {
+        given().
+            pathParam("countryCode", countryCode).pathParam("zipCode", zipCode).
+        when().
+            get("http://zippopotam.us/{countryCode}/{zipCode}").
+        then().
+            assertThat().
+            body("places[0].'place name'", equalTo(expectedPlaceName));
+    }
+If we now run our parameterized REST Assured test, we can see that it runs the same test 3 times now.
+
+So, essentially, for the statistics, it runs 3 separate tests. And as you can see, it runs the first iteration with the values US 90210 and the expected place name Beverly Hills. The second iteration with zip code 12345 and the expected place name Schenectady. And the last one with country code CA and zip code B2R and the expected place name of Waverley.
+
+And this means we successfully parameterized our REST Assured test and we can now get rid of our copy and paste tests, where we simply replaced the value specified to the API and expected values in our Hamcrest assertions.
+
+And I can tell you, to me, that feels really good because we now have a much more powerful and flexible REST Assured test, which is also much easier to maintain.
+
+
+4: Update the specified test data
+
+And to illustrate the power of having parameterized REST Assured tests, let's take a quick look at what happens if we have to update our test data set that we use to feed our REST Assured test.
+
+As a quick example, let's see what we need to do if we want to specify another example or another test case. If we also, for example, want to verify specific zip codes in the Netherlands. Then, as you might expect, the only thing that we need to do is specify yet another test data record with, for example, a country code NL, a zip code of 1001, which is a zip code in Amsterdam.
+
+    @DataProvider
+    public static Object[][] zipCodesAndPlaces() {
+        return new Object[][] {
+            { "us", "90210", "Beverly Hills" },
+            { "us", "12345", "Schenectady" },
+            { "ca", "B2R", "Waverley"},
+            {"nl", "1001", "Amsterdam"}
+        };
+    }
+And we can run our test again, and instead of the previous 3 iterations, it'll now run our test 4 times. One additional time with our newly added test data record for Amsterdam.
+
+So, as you can see, this is really powerful mechanism to parameterize your REST Assured tests and get rid of a whole lot of duplicated code, which takes much more effort to maintain.
+
+
+
+CHAPTER 4
+==========
+So now that we've seen a couple of examples of how to use REST Assured for testing RESTful APIs, let's look at some of the features that REST Assured provides that can help you make your code more maintainable.
+#Reusable Request Specifications
+The first type of optimization that I want to dive into is the ability to reuse request specifications. So, for example, in the tests that we've seen so far, we've always hard-coded the entire API path into our tests themselves. This might lead to a lot of rework in case an API base URL changes or you want to run your tests against multiple environments.
+
+So let's see if you can do something about that.
+
+The mechanism that REST Assured offers to enable us to create flexible and reusable requests specifications is called a RequestSpecification.
+
+Here you see a very basic example of such a request specification where I create a new RequestSpecBuilder and I tell it setBaseUri("http://api.zippopotam.us") as the base URI so that I don't need to specify that in my tests again.
+
+import io.restassured.builder.RequestSpecBuilder;
+import org.junit.BeforeClass;
+
+public class Chapter4Test {
+
+    private static RequestSpecification requestSpec;
+
+    @BeforeClass
+    public static void createRequestSpecification() {
+    
+        requestSpec = new RequestSpecBuilder().
+            setBaseUri("http://api.zippopotam.us").
+            build();
+    }
+}
+There are many other types of request characteristics that you can set through the RequestSpecification builder, such as a base path, a standard content type for all of your requests. You can set default cookies for your requests. You can set default form and query parameters for your tests. You can add other types of headers. You also set default authentication schemes for all of your requests.
+
+So, there are all kinds of options that you can leverage to create a single source of truth or a single place in your code where you specify common details that you want to reuse throughout all of the requests that you're going to be evoking in your tests.
+
+And if we want to use that RequestSpecification that we just created in our tests, we simply specify it after the given part where we, as we've seen before, specify other details for our requests that we're going to make inside of all our tests.
+
+And because we've now specified the base URI in our RequestSpecification, we can omit it from the GET call because REST Assured will automatically append the path that we're going to evoke in our test, in our GET method here to the base URI that's defined in the RequestSpecification.
+
+    @Test
+    public void requestUsZipCode90210_checkPlaceNameInResponseBody_expectBeverlyHills_withRequestSpec() {
+
+        given().
+            spec(requestSpec).
+        when().
+            get("us/90210").
+        then().
+            assertThat().
+            statusCode(200);
+    }
+So, let's run the test. We see that our test passes, telling us that the base URI has correctly been set, otherwise the API call that we would have made would have never returned an HTTP status code of 200.
+
+#Reusable Response Checks
+Now an even more interesting feature would be the ability to reuse response checks. So if, for example, throughout all of my tests, I want to do an assertion on the responses that I get back in the tests that the HTTP status code is 200 for all of the tests in my test class, for example, or I want to check that the returned content type is JSON or XML or whatever content type it is that's expected. Typically, I don't want to specify such an individual check for each and every one of the tests in my test class because that would mean I would have to duplicate a lot of code. So, wouldn't it be nice if we could specify those expected values in one place and maintain and reuse them from there?
+
+Now as you might have expected, in addition to the RequestSpecification, REST Assured also offers the ResponseSpecification mechanism. It works in much the same way with the difference being that with the RequestSpecification, you specify common characteristics of the requests that you're going to make, but in the ResponseSpecification, you specify common characteristics for the responses that are returned from the API calls that you've made, or common checks that you want to perform on those responses that you get.
+
+So, in this example, I create a ResponseSpecification stating that the expected status code for each of the API calls or for the REST Assured tests in which I use that ResponseSpecification is equal to 200 and that the expected content type is equal to JSON.
+
+    private static ResponseSpecification responseSpec;
+
+    @BeforeClass
+    public static void createResponseSpecification() {
+
+        responseSpec = new ResponseSpecBuilder().
+            expectStatusCode(200).
+            expectContentType(ContentType.JSON).
+            build();
+    }
+And as with the RequestSpecification, I can simply add the previously defined ResponseSpecification, but this time I add it to the then part because that's where you specify all characteristics, all expected failures, all the assertions you want to do with regards to the API responses.
+
+    @Test
+    public void requestUsZipCode90210_checkPlaceNameInResponseBody_expectBeverlyHills_withResponseSpec() {
+
+        given().
+            spec(requestSpec).
+        when().
+            get("http://zippopotam.us/us/90210").
+        then().
+            spec(responseSpec).
+        and().
+            assertThat().
+            body("places[0].'place name'", equalTo("Beverly Hills"));
+    }
+So, this test will check whether the status code of the API call that's being performed is equal to 200, that the content type is equal to JSON.
+
+And as you can see, you can also, next to the checks that are defined in the ResponseSpecification, you can also add custom checks, which are individual to each test. And in this example, I also want to perform a check that the place name for the first place that's being returned by the API call is equal to "Beverly Hills".
+
+So, when we run our test, we see that the test passes, telling us that the status code matches the expected value of 200, that the content type was indeed equal to JSON and that the first place name in the list of places returned by the API was equal to "Beverly Hills".
+
+Now, to illustrate that a response specification really works, let's change the expected status code to 201 and rerun our test. And we can see that the test fails and when we look at our console output, we see that it tells us that the expected status code is 201, but the actual status code that's being returned by the API is 200. And this tells us that the response specification mechanism really works as we expected it to do.
+
+#Extracting Response Values for Reuse
+The last example that I want to give of optimizing your REST Assured code and being able to reuse pre-specified and pre-defined values is the ability to extract values, element values from individual responses from API calls and storing them for later reuse.
+
+So, one very typical example would be performing an API call prior to a test run that retrieves an authentication token for an API that's secured with the OAuth authentication mechanism and then being able to reuse that token in all subsequent REST Assured tests.
+
+To illustrate how the extraction mechanism works in REST Assured, I've created another test which calls the same API endpoint that we've been calling a lot of times before already, but instead of directly specifying the assertions into our REST Assured test code itself, I used the extract method and then specify a path which is again adjacent path to an element whose value I want to extract and then store it in a local string place name.
+
+So, in this case, it will extract the place name of the first place in the list of places that's being returned by the API, store it in a local String placeName. And then I perform an assertion on it to demonstrate that the place name that's being extracted from the API response is actually equal to "Beverly Hills" and by doing so, I show you that the extraction mechanism works as I expect it to do.
+
+    @Test
+    public void requestUsZipCode90210_extractPlaceNameFromResponseBody_assertEqualToBeverlyHills() {
+    
+        String placeName =
+        given().
+            spec(requestSpec).
+        when().
+            get("http://zippopotam.us/us/90210").
+        then().
+            extract().
+            path("places[0].'Beverly Hills'");
+
+        Assert.assertEquals(placeName, "Beverly Hills");
+    }
+}
+Let's run the test. And the test passes, telling us that the extracted place name, which had been stored in the local string variable is actually equal to "Beverly Hills". And again, this is a really simple example to show you how the extraction mechanism works.
+
+And this extraction mechanism, from example, really shines in scenarios where you need to extract an authentication token from an API response and reuse that in subsequent tests or when you want to create a test that performs a number of API calls one after another. So, for example, you want to simulate a scenario where you first have to create a customer using some customer details and it returns you a customer ID and then, for example, place an order for that same customer, using the customer ID. And you can't predict the customer ID before you run the tests, so you need to create a new customer and then retrieve, extract and store the customer ID from it in order to be able to use it in subsequent tests. And that's where the extraction method that's being offered by REST Assured really comes in handy.
+
+
+
+
+REST ASSURED DOC
+=======================
+
+Class RestAssured
+java.lang.Object
+io.restassured.RestAssured
+
+public class RestAssured
+extends Object
+REST Assured is a Java DSL for simplifying testing of REST based services built on top of HTTP Builder. It supports POST, GET, PUT, DELETE, HEAD, PATCH and OPTIONS requests and to verify the response of these requests. Usage examples:
+Assume that the GET request (to http://localhost:8080/lotto) returns JSON as:
+ {
+ "lotto":{
+   "lottoId":5,
+   "winning-numbers":[2,45,34,23,7,5,3],
+   "winners":[{
+     "winnerId":23,
+     "numbers":[2,45,34,23,3,5]
+   },{
+     "winnerId":54,
+     "numbers":[52,3,12,11,18,22]
+   }]
+  }
+ }
+ 
+REST assured can then help you to easily make the GET request and verify the response. E.g. if you want to verify that lottoId is equal to 5 you can do like this:
+
+ get("/lotto").then().assertThat().body("lotto.lottoId", equalTo(5));
+ 
+or perhaps you want to check that the winnerId's are 23 and 54:
+
+ get("/lotto").then().assertThat().body("lotto.winners.winnerId", hasItems(23, 54));
+ 
+XML can be verified in a similar way. Imagine that a POST request to http://localhost:8080/greetXML returns:
+ <greeting>
+     <firstName>{params("firstName")}</firstName>
+     <lastName>{params("lastName")}</lastName>
+   </greeting>
+ 
+i.e. it sends back a greeting based on the firstName and lastName parameter sent in the request. You can easily perform and verify e.g. the firstName with REST assured:
+
+ with().parameters("firstName", "John", "lastName", "Doe").when().post("/greetXML").then().assertThat().body("greeting.firstName", equalTo("John"));
+ 
+If you want to verify both firstName and lastName you may do like this:
+
+ with().parameters("firstName", "John", "lastName", "Doe").when().post("/greetXML").then().assertThat().body("greeting.firstName", equalTo("John")).and().body("greeting.lastName", equalTo("Doe"));
+ 
+or a little shorter:
+
+ with().parameters("firstName", "John", "lastName", "Doe").when().post("/greetXML").then().assertThat().body("greeting.firstName", equalTo("John"), "greeting.lastName", equalTo("Doe"));
+ 
+You can also verify XML responses using x-path. For example:
+ given().parameters("firstName", "John", "lastName", "Doe").when().post("/greetXML").then().assertThat().body(hasXPath("/greeting/firstName", containsString("Jo")));
+ 
+or
+ with().parameters("firstName", "John", "lastName", "Doe").post("/greetXML").then().body(hasXPath("/greeting/firstName[text()='John']"));
+ 
+XML response bodies can also be verified against an XML Schema (XSD) or DTD.
+XSD example:
+ get("/carRecords").then().assertThat().body(matchesXsd(xsd));
+ 
+DTD example:
+ get("/videos").then().assertThat().body(matchesDtd(dtd));
+ 
+matchesXsd and matchesDtd are Hamcrest matchers which you can import from RestAssuredMatchers.
+Besides specifying request parameters you can also specify headers, cookies, body and content type.
+Cookie:
+ given().cookie("username", "John").when().get("/cookie").then().assertThat().body(equalTo("username"));
+ 
+Headers:
+ given().header("MyHeader", "Something").and(). ..
+ given().headers("MyHeader", "Something", "MyOtherHeader", "SomethingElse").and(). ..
+ 
+Content Type:
+ given().contentType(ContentType.TEXT). ..
+ 
+Body:
+ given().request().body("some body"). .. // Works for POST and PUT requests
+ given().request().body(new byte[]{42}). .. // Works for POST
+ 
+You can also verify status code, status line, cookies, headers, content type and body.
+Cookie:
+ expect().cookie("cookieName", "cookieValue"). ..
+ expect().cookies("cookieName1", "cookieValue1", "cookieName2", "cookieValue2"). ..
+ expect().cookies("cookieName1", "cookieValue1", "cookieName2", containsString("Value2")). ..
+ 
+Status:
+ get("/x").then().assertThat().statusCode(200). ..
+ get("/x").then().assertThat().statusLine("something"). ..
+ get("/x").then().assertThat().statusLine(containsString("some")). ..
+ 
+Headers:
+ get("/x").then().assertThat().header("headerName", "headerValue"). ..
+ get("/x").then().assertThat().headers("headerName1", "headerValue1", "headerName2", "headerValue2"). ..
+ get("/x").then().assertThat().headers("headerName1", "headerValue1", "headerName2", containsString("Value2")). ..
+ 
+Content-Type:
+ get("/x").then().assertThat().contentType(ContentType.JSON). ..
+ 
+REST Assured also supports mapping a request body and response body to and from a Java object using Jackson, Gson or JAXB. Usage example:
+ Greeting greeting = get("/greeting").as(Greeting.class);
+ 
+ Greeting greeting = new Greeting();
+ greeting.setFirstName("John");
+ greeting.setLastName("Doe");
+
+ given().body(greeting).when().post("/greeting");
+ 
+See the javadoc for the body method for more details.
+Full body/content matching:
+ get("/x").then().assertThat().body(equalsTo("something")). ..
+ get("/x").then().assertThat().content(equalsTo("something")). .. // Same as above
+ 
+REST assured also supports some authentication schemes, for example basic authentication:
+ given().auth().basic("username", "password").when().get("/secured/hello").then().statusCode(200);
+ 
+Other supported schemes are OAuth and certificate authentication.
+By default REST assured assumes host localhost and port 8080 when doing a request. If you want a different port you can do:
+ given().port(80). ..
+ 
+or simply:
+ .. when().get("http://myhost.org:80/doSomething");
+ 
+Parameters can also be set directly on the url:
+ ..when().get("/name?firstName=John&lastName=Doe");
+ 
+You can use the XmlPath or JsonPath to easily parse XML or JSON data from a response.
+XML example:
+            String xml = post("/greetXML?firstName=John&lastName=Doe").andReturn().asString();
+            // Now use XmlPath to get the first and last name
+            String firstName = with(xml).get("greeting.firstName");
+            String lastName = with(xml).get("greeting.lastName");
+
+            // or a bit more efficiently:
+            XmlPath xmlPath = new XmlPath(xml).setRootPath("greeting");
+            String firstName = xmlPath.get("firstName");
+            String lastName = xmlPath.get("lastName");
+        
+JSON example:
+            String json = get("/lotto").asString();
+            // Now use JsonPath to get data out of the JSON body
+            int lottoId = with(json).getInt("lotto.lottoId);
+            List winnerIds = with(json).get("lotto.winners.winnerId");
+
+            // or a bit more efficiently:
+            JsonPath jsonPath = new JsonPath(json).setRootPath("lotto");
+            int lottoId = jsonPath.getInt("lottoId");
+            List winnderIds = jsonPath.get("winnders.winnderId");
+        
+REST Assured providers predefined parsers for e.g. HTML, XML and JSON. But you can parse other kinds of content by registering a predefined parser for unsupported content-types by using:
+ RestAssured.registerParser(<content-type>, <parser>);
+ 
+E.g. to register that content-type 'application/custom' should be parsed using the XML parser do:
+ RestAssured.registerParser("application/custom", Parser.XML);
+ 
+You can also unregister a parser using:
+ RestAssured.unregisterParser("application/custom");
+ 
+If can also specify a default parser for all content-types that do not match a pre-defined or registered parser. This is also useful if the response doesn't contain a content-type at all:
+ RestAssured.defaultParser = Parser.JSON;
+ 
+If you need to re-use a specification in multiple tests or multiple requests you can use the ResponseSpecBuilder and RequestSpecBuilder like this:
+ RequestSpecification requestSpec = new RequestSpecBuilder().addParameter("parameter1", "value1").build();
+ ResponseSpecification responseSpec = new ResponseSpecBuilder().expectStatusCode(200).build();
+
+ given().
+         spec(requestSpec).
+ when().
+        get("/something");
+ then().
+         spec(responseSpec).
+         body("x.y.z", equalTo("something"));
+ 
+You can also create filters and add to the request specification. A filter allows you to inspect and alter a request before it's actually committed and also inspect and alter the response before it's returned to the expectations. You can regard it as an "around advice" in AOP terms. Filters can be used to implement custom authentication schemes, session management, logging etc. E.g.
+ given().filter(ResponseLoggingFilter.logResponseIfStatusCodeIs(302)). ..
+ 
+will log/print the response body to after each request.
+You can also change the default base URI, base path, port, authentication scheme, root path and filters for all subsequent requests:
+ RestAssured.baseURI = "http://myhost.org";
+ RestAssured.port = 80;
+ RestAssured.basePath = "/resource";
+ RestAssured.authentication = basic("username", "password");
+ RestAssured.rootPath = "store.book";
+ 
+This means that a request like e.g. get("/hello") goes to: http://myhost.org:8080/resource/hello which basic authentication credentials "username" and "password". See rootPath for more info about setting the root paths, filters(java.util.List) for setting default filters
+You can reset to the standard baseURI (localhost), basePath (empty), standard port (8080), default authentication scheme (none), default parser (none) and default root path (empty string) using:
+ RestAssured.reset();
+ 
+In order to use REST assured effectively it's recommended to statically import methods from the following classes:
+
+io.restassured.RestAssured.*
+io.restassured.matcher.RestAssuredMatchers.*
+org.hamcrest.Matchers.*
